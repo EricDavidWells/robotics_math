@@ -1,3 +1,2 @@
-
 export PYTHONPATH=$PWD
 pytest
