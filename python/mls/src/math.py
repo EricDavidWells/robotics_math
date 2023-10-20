@@ -1,36 +1,6 @@
 import numpy as np
 
 
-def normalize_matrix(matrix):
-    """
-    Normalize a matrix by scaling its values so that the magnitude of the matrix is 1.
-
-    Args:
-        matrix (numpy.ndarray): Input matrix.
-
-    Returns:
-        (numpy.ndarray, float): A tuple containing the normalized matrix and the scaling factor.
-
-    Raises:
-        ValueError: If the input matrix has a magnitude of 0 (i.e., all-zero matrix).
-
-    """
-    # Calculate the magnitude of the input matrix
-    magnitude = np.linalg.norm(matrix)
-
-    # Check if the magnitude is zero
-    if np.isclose(magnitude, 0):
-        raise ValueError("Input matrix has a magnitude of 0 (all-zero matrix).")
-
-    # Calculate the scaling factor
-    scaling_factor = 1 / magnitude
-
-    # Normalize the matrix by scaling its values
-    normalized_matrix = matrix * scaling_factor
-
-    return normalized_matrix, scaling_factor
-
-
 def skew_symmetric_matrix(vector):
     if vector.shape != (3,):
         raise ValueError("Input vector must be a 1x3 NumPy array.")
@@ -40,7 +10,6 @@ def skew_symmetric_matrix(vector):
                             [z, 0, -x],
                             [-y, x, 0]])
     return skew_matrix
-
 
 def create_homogeneous_xform(rotation, translation):
     # Check if the input matrices are NumPy arrays

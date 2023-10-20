@@ -54,28 +54,5 @@ def test_create_homogeneous_xform_with_valid_input():
     with pytest.raises(ValueError):
         create_homogeneous_xform(rotation, translation)
 
-def test_normalize_matrix_with_valid_input():
-    # Create an input matrix
-    input_matrix = np.array([[2, 0, 0],
-                            [0, 3, 0],
-                            [0, 0, 4]])
-
-    # Call the function to get the normalized matrix and the scaling factor
-    normalized_matrix, scaling_factor = normalize_matrix(input_matrix)
-
-    # Check if the magnitude of the normalized matrix is close to 1
-    magnitude = np.linalg.norm(normalized_matrix)
-    assert np.isclose(magnitude, 1.0)
-
-    # Check if the scaling factor is the reciprocal of the magnitude of the input matrix
-    input_magnitude = np.linalg.norm(input_matrix)
-    assert np.isclose(scaling_factor, 1 / input_magnitude)
-
-    # Test with an input matrix that has zero magnitude (all-zero matrix)
-    input_matrix = np.zeros((3, 3))
-
-    with pytest.raises(ValueError):
-        normalize_matrix(input_matrix)
-
 if __name__ == "__main__":
     pytest.main()
