@@ -4,6 +4,7 @@ import os
 import sys
 
 from mls.src.math import *
+from math import sin, cos, tan
 
 # Test cases for skew_symmetric_matrix
 def test_skew_symmetric_matrix():
@@ -19,6 +20,23 @@ def test_skew_symmetric_matrix():
     invalid_input_vector = np.array([1.0, 2.0])
     with pytest.raises(ValueError):
         skew_symmetric_matrix(invalid_input_vector)
+
+def test_compute_trace_with_valid_input():
+    # Test with a valid square matrix
+    matrix = np.array([[1, 2, 3],
+                      [4, 5, 6],
+                      [7, 8, 9]])
+
+    trace = matrix_trace(matrix)
+    expected_trace = 15  # Sum of the diagonal elements
+    assert trace == expected_trace
+
+    # Test with a non-square matrix
+    non_square_matrix = np.array([[1, 2, 3],
+                                 [4, 5, 6]])
+
+    with pytest.raises(ValueError):
+        matrix_trace(non_square_matrix)
 
 def test_create_homogeneous_xform_with_valid_input():
     # Test with valid input
@@ -53,6 +71,72 @@ def test_create_homogeneous_xform_with_valid_input():
 
     with pytest.raises(ValueError):
         create_homogeneous_xform(rotation, translation)
+
+
+def test_matrix_exponential_from_angle_axis():
+    # Valid input
+    vector = np.array([1, 0, 0])
+    theta = np.pi / 2
+    result = matrix_exponential_from_angle_axis(vector, theta)
+    expected_result = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+    assert np.allclose(result, expected_result)
+
+    # Invalid input: vector shape is not 1x3
+    with pytest.raises(ValueError):
+        matrix_exponential_from_angle_axis(np.zeros(4), theta)
+
+    # compare with https://www.andre-gaschler.com/rotationconverter/
+    vector = np.array([1, 2, 3])
+    theta = np.linalg.norm(vector)
+    result = matrix_exponential_from_angle_axis(vector, theta)
+    expected_result = np.array([[-0.6949205,  0.7135210,  0.0892929], [-0.1920070, -0.3037851,  0.9331924], [0.6929781,  0.6313497,  0.3481075]])
+    assert np.allclose(result, expected_result)
+
+    # work backwards, note that expected values can be negative (two solutions)
+    matrix = np.array([[-0.6949205,  0.7135210,  0.0892929], [-0.1920070, -0.3037851,  0.9331924], [0.6929781,  0.6313497,  0.3481075]])
+    expected_theta = np.linalg.norm(np.array([1, 2, 3]))
+    expected_w = np.array([1, 2, 3]) / expected_theta
+
+    w, theta = matrix_exponential_to_angle_axis(matrix)
+
+    assert np.isclose(theta, expected_theta) or np.isclose(theta, 2*np.pi - expected_theta)
+    assert np.allclose(w, expected_w) or np.allclose(w, -expected_w)
+
+def test_homogenous_twist():
+    l1 = 3
+    theta = 1
+    v = np.array([l1, 0, 0])
+    w = np.array([0, 0, 1])
+    twist = create_twist(w, v)
+    expected_result = np.array([[cos(theta), -sin(theta), 0, l1*sin(theta)], 
+                                [sin(theta), cos(theta), 0, l1*(1-cos(theta))],
+                                [0, 0, 1, 0],
+                                [0, 0, 0, 1]])
+    
+    g = twist_to_homogeneous(twist, theta)
+    assert np.allclose(g, expected_result)
+
+
+    new_twist, new_theta = homogeneous_to_twist(g)
+    assert np.allclose(twist, new_twist)
+    assert np.isclose(theta, new_theta)
+
+    # test pure translation
+    l1 = 3
+    theta = 1
+    v = np.array([1, 0, 0])
+    w = np.array([0, 0, 0])
+    twist = create_twist(w, v)
+    expected_result = np.array([[1, 0, 0, theta], 
+                                [0, 1, 0, 0],
+                                [0, 0, 1, 0],
+                                [0, 0, 0, 1]])
+    g = twist_to_homogeneous(twist, theta)
+    assert np.allclose(g, expected_result)
+
+    new_twist, new_theta = homogeneous_to_twist(g)
+    assert np.allclose(twist, new_twist)
+    assert np.isclose(theta, new_theta)
 
 if __name__ == "__main__":
     pytest.main()
