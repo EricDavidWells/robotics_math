@@ -11,21 +11,15 @@ def skew_symmetric_matrix(vector):
                             [-y, x, 0]])
     return skew_matrix
 
-def matrix_exponential_from_skew_symmetric(matrix, theta):
-    if matrix.shape != (3, 3):
-        raise ValueError("Input matrix must be a 3x3 NumPy array.")
-     
-    return np.eye(3) + matrix * sin(theta) + matrix @ matrix * (1 - cos(theta))
-
-def matrix_exponential_from_angle_axis(vector, theta):
+def rotation_from_canonical_coordinates(vector, theta):
     if vector.shape != (3,):
         raise ValueError("Input vector must be a 1x3 NumPy array.")
     
     vector = vector / np.linalg.norm(vector)
-    skew_matrix = skew_symmetric_matrix(vector)
-    return matrix_exponential_from_skew_symmetric(skew_matrix, theta)
+    matrix = skew_symmetric_matrix(vector)
+    return np.eye(3) + matrix * sin(theta) + matrix @ matrix * (1 - cos(theta))
 
-def matrix_exponential_to_angle_axis(matrix):
+def rotation_to_canonical_coordinates(matrix):
     if matrix.shape != (3, 3):
         raise ValueError("Input matrix must be a 3x3 NumPy array.")
 
@@ -52,7 +46,7 @@ def matrix_trace(matrix):
     trace = np.trace(matrix)
     return trace
 
-def create_homogeneous_xform(rotation, translation):
+def homogenous_from_rotation_translation(rotation, translation):
     # Check if the input matrices are NumPy arrays
     if not isinstance(rotation, np.ndarray) or not isinstance(translation, np.ndarray):
         raise ValueError("Both rotation and translation must be NumPy arrays.")
@@ -95,7 +89,7 @@ def create_twist(w, v):
 
     return np.concatenate((w, v))
 
-def twist_to_homogeneous(twist, theta):
+def homogenous_from_exponential_coordinates(twist, theta):
     """
     Convert a twist to a 4x4 homogeneous transformation matrix.
 
@@ -121,10 +115,8 @@ def twist_to_homogeneous(twist, theta):
     R = np.eye(3)
     if np.allclose(w, 0):
         p = v * theta
-        print("ALLCLOSE")
     else:
-        print("ALLNOTCLOSE")
-        R = matrix_exponential_from_angle_axis(w, theta)
+        R = rotation_from_canonical_coordinates(w, theta)
         p = (np.eye(3) - R)@skew_symmetric_matrix(w)@v + w.reshape(3,1)@w.reshape(1,3)@v*theta
 
     # Create the 4x4 homogeneous transformation matrix
@@ -134,7 +126,7 @@ def twist_to_homogeneous(twist, theta):
 
     return T
 
-def homogeneous_to_twist(T):
+def homogenous_to_exponential_coordinates(T):
     """
     Convert a homogeneous transformation matrix to a twist.
 
@@ -162,15 +154,10 @@ def homogeneous_to_twist(T):
     else:
         
       # Calculate the angular velocity (skew-symmetric matrix)
-      w, theta = matrix_exponential_to_angle_axis(R)
-      print(f"w: {w}, theta: {theta}")
+      w, theta = rotation_to_canonical_coordinates(R)
       A = (np.eye(3) - R)@skew_symmetric_matrix(w) + w.reshape(3,1)@w.reshape(1,3) * theta
 
       # Calculate the linear velocity
       v = np.linalg.inv(A) @ p
-      print(f"p: {p}")
-      print(f"v: {v}")
-      # TODO: handle zero rotation
 
     return np.concatenate((w, v)), theta
-

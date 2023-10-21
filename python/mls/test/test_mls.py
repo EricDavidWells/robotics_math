@@ -38,11 +38,11 @@ def test_compute_trace_with_valid_input():
     with pytest.raises(ValueError):
         matrix_trace(non_square_matrix)
 
-def test_create_homogeneous_xform_with_valid_input():
+def test_homogenous_from_rotation_translation_with_valid_input():
     # Test with valid input
     rotation = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     translation = np.array([1, 2, 3])
-    result = create_homogeneous_xform(rotation, translation)
+    result = homogenous_from_rotation_translation(rotation, translation)
 
     expected_result = np.array([[1, 0, 0, 1],
                                 [0, 1, 0, 2],
@@ -56,39 +56,39 @@ def test_create_homogeneous_xform_with_valid_input():
     translation = [1, 2, 3]
 
     with pytest.raises(ValueError):
-        create_homogeneous_xform(rotation, translation)
+        homogenous_from_rotation_translation(rotation, translation)
 
     # Test with invalid input (translation vector not 3x1)
     rotation = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     translation = np.array([1, 2])
 
     with pytest.raises(ValueError):
-        create_homogeneous_xform(rotation, translation)
+        homogenous_from_rotation_translation(rotation, translation)
 
     # Test with invalid input (rotation matrix not 3x3)
     rotation = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]])
     translation = np.array([1, 2, 3])
 
     with pytest.raises(ValueError):
-        create_homogeneous_xform(rotation, translation)
+        homogenous_from_rotation_translation(rotation, translation)
 
 
-def test_matrix_exponential_from_angle_axis():
+def test_rotation_from_canonical_coordinates():
     # Valid input
     vector = np.array([1, 0, 0])
     theta = np.pi / 2
-    result = matrix_exponential_from_angle_axis(vector, theta)
+    result = rotation_from_canonical_coordinates(vector, theta)
     expected_result = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
     assert np.allclose(result, expected_result)
 
     # Invalid input: vector shape is not 1x3
     with pytest.raises(ValueError):
-        matrix_exponential_from_angle_axis(np.zeros(4), theta)
+        rotation_from_canonical_coordinates(np.zeros(4), theta)
 
     # compare with https://www.andre-gaschler.com/rotationconverter/
     vector = np.array([1, 2, 3])
     theta = np.linalg.norm(vector)
-    result = matrix_exponential_from_angle_axis(vector, theta)
+    result = rotation_from_canonical_coordinates(vector, theta)
     expected_result = np.array([[-0.6949205,  0.7135210,  0.0892929], [-0.1920070, -0.3037851,  0.9331924], [0.6929781,  0.6313497,  0.3481075]])
     assert np.allclose(result, expected_result)
 
@@ -97,7 +97,7 @@ def test_matrix_exponential_from_angle_axis():
     expected_theta = np.linalg.norm(np.array([1, 2, 3]))
     expected_w = np.array([1, 2, 3]) / expected_theta
 
-    w, theta = matrix_exponential_to_angle_axis(matrix)
+    w, theta = rotation_to_canonical_coordinates(matrix)
 
     assert np.isclose(theta, expected_theta) or np.isclose(theta, 2*np.pi - expected_theta)
     assert np.allclose(w, expected_w) or np.allclose(w, -expected_w)
@@ -113,11 +113,11 @@ def test_homogenous_twist():
                                 [0, 0, 1, 0],
                                 [0, 0, 0, 1]])
     
-    g = twist_to_homogeneous(twist, theta)
+    g = homogenous_from_exponential_coordinates(twist, theta)
     assert np.allclose(g, expected_result)
 
 
-    new_twist, new_theta = homogeneous_to_twist(g)
+    new_twist, new_theta = homogenous_to_exponential_coordinates(g)
     assert np.allclose(twist, new_twist)
     assert np.isclose(theta, new_theta)
 
@@ -131,10 +131,10 @@ def test_homogenous_twist():
                                 [0, 1, 0, 0],
                                 [0, 0, 1, 0],
                                 [0, 0, 0, 1]])
-    g = twist_to_homogeneous(twist, theta)
+    g = homogenous_from_exponential_coordinates(twist, theta)
     assert np.allclose(g, expected_result)
 
-    new_twist, new_theta = homogeneous_to_twist(g)
+    new_twist, new_theta = homogenous_to_exponential_coordinates(g)
     assert np.allclose(twist, new_twist)
     assert np.isclose(theta, new_theta)
 
