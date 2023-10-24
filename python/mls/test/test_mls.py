@@ -140,39 +140,43 @@ def test_homogenous_twist():
     assert np.isclose(twist.theta, new_twist.theta)
 
 def test_kinematic_tree_creation():
-    # Create some Joint objects
-    joint0 = Joint("origin", Twist(np.array([0.1, 0.2, 0.3]), np.array([1.0, 2.0, 3.0]), theta=0.1))
-    joint1 = Joint("Joint1", Twist(np.array([0.1, 0.2, 0.3]), np.array([1.0, 2.0, 3.0]), theta=0.1))
-    joint2 = Joint("Joint2", Twist(np.array([0.2, 0.3, 0.4]), np.array([2.0, 3.0, 4.0]), theta=0.2))
-
+    # Create links and joints
+    link_origin = Link("origin")
     link1 = Link("link1")
     link2 = Link("link2")
+    link3 = Link("link3")
 
-    kinematicTreeNode0 = KinematicTreeNode(joint0)
-    kinematicTreeNode1 = KinematicTreeNode(joint1)
-    kinematicTreeNode2 = KinematicTreeNode(joint2)
+    joint0 = Joint("joint_0", default_twist=Twist(np.array([0.1, 0.2, 0.3]), np.array([1.0, 2.0, 3.0]), theta=0.1))
+    joint1 = Joint("joint_1", default_twist=Twist(np.array([0.1, 0.2, 0.3]), np.array([1.0, 2.0, 3.0]), theta=0.1))
+    joint2 = Joint("joint_2", default_twist=Twist(np.array([0.2, 0.3, 0.4]), np.array([2.0, 3.0, 4.0]), theta=0.2))
 
-    tree = KinematicTree()
+    # Create the kinematic tree structure
+    kinematicTree = KinematicTree()
 
-    tree.add_node(kinematicTreeNode0)
-    tree.add_node(kinematicTreeNode1)
-    tree.add_node(kinematicTreeNode2)
+    node_origin = KinematicTreeNode(link_origin)
+    node1 = KinematicTreeNode(link1)
+    node2 = KinematicTreeNode(link2)
+    node3 = KinematicTreeNode(link3)
 
-    tree.add_edge(kinematicTreeNode0, kinematicTreeNode1, link1)
-    tree.add_edge(kinematicTreeNode1, kinematicTreeNode2, link2)
+    kinematicTree.add_node(node_origin)
+    kinematicTree.add_node(node1)
+    kinematicTree.add_node(node2)
+    kinematicTree.add_node(node3)
 
-    tree.print_tree()
+    kinematicTree.add_edge(node_origin, node1, joint0)
+    kinematicTree.add_edge(node1, node2, joint1)
+    kinematicTree.add_edge(node_origin, node3, joint2)
+
+    # Print the kinematic tree
+    kinematicTree.print_tree()
 
 def test_kinematic_tree_forward_kinematics():
     # example 4.1.2 in Modern Robotics
 
-    xform = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1]])
-    origin = Joint("origin", 
-                   default_twist=homogenous_to_exponential_coordinates(xform))
+    link_origin = Link("origin")
+    link1 = Link("link1")
+    link2 = Link("link2")
+
     xform = np.array([
         [1, 0, 0, 0],
         [0, 1, 0, 0],
@@ -183,47 +187,32 @@ def test_kinematic_tree_forward_kinematics():
                    default_twist=homogenous_to_exponential_coordinates(xform),
                    active_twist=active_twist)
     xform = np.array([
-        [1, 0, 0, 10],
+        [1, 0, 0, 0],
         [0, 1, 0, 0],
-        [0, 0, 1, 0],
+        [0, 0, 1, 10],
         [0, 0, 0, 1]])
     active_twist = Twist(np.array([0, 1, 0]), np.array([0, 0, 0]))
     joint1 = Joint("joint_1", 
                    default_twist=homogenous_to_exponential_coordinates(xform),
                    active_twist=active_twist)
 
-    xform = np.array([
-        [1, 0, 0, 5],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1]])
-    active_twist = Twist(np.array([0, 0, 1]), np.array([0, 0, 0]))
-    joint2 = Joint("joint_2", 
-                   default_twist=homogenous_to_exponential_coordinates(xform),
-                   active_twist=active_twist)
-
-    link1 = Link("link1")
-    link1 = Link("link2")
-
-    kinematicTreeNodeorigin = KinematicTreeNode(origin)
-    kinematicTreeNode0 = KinematicTreeNode(joint0)
-    kinematicTreeNode1 = KinematicTreeNode(joint1)
-    kinematicTreeNode2 = KinematicTreeNode(joint2)
+    kinematicTreeNodeorigin = KinematicTreeNode(link_origin)
+    kinematicTreeNode1 = KinematicTreeNode(link1)
+    kinematicTreeNode2 = KinematicTreeNode(link2)
 
     tree = KinematicTree()
     tree.add_node(kinematicTreeNodeorigin)
-    tree.add_node(kinematicTreeNode0)
     tree.add_node(kinematicTreeNode1)
     tree.add_node(kinematicTreeNode2)
-    tree.add_edge(kinematicTreeNode0, kinematicTreeNode1, link1)
-    tree.add_edge(kinematicTreeNode1, kinematicTreeNode2, link1)
+    tree.add_edge(kinematicTreeNodeorigin, kinematicTreeNode1, joint0)
+    tree.add_edge(kinematicTreeNode1, kinematicTreeNode2, joint1)
     tree.print_tree()
 
-    tree.update_thetas(["joint_0", "joint_1", "joint_2"], [pi, pi, pi/6])
-    final_xform = tree.forward_kinematics(tree.get_node_by_joint_name("joint_2"))
+    tree.update_thetas(["joint_0", "joint_1"], [pi, 0])
+    final_xform = tree.forward_kinematics(tree.get_edge_by_joint_name("joint_1"))
     print(np.around(final_xform, 2))
-    tree.update_thetas(["joint_0", "joint_1", "joint_2"], [pi, pi, pi/6+0.1])
-    final_xform = tree.forward_kinematics(tree.get_node_by_joint_name("joint_2"))
+    tree.update_thetas(["joint_0", "joint_1"], [0, pi])
+    final_xform = tree.forward_kinematics(tree.get_edge_by_joint_name("joint_1"))
     print(np.around(final_xform, 2))
 
     
