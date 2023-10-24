@@ -216,17 +216,14 @@ def test_kinematic_tree_forward_kinematics():
     print(np.around(final_xform, 2))
 
     
-# def test_load_robot_from_urdf():
+def test_load_kinematic_tree_from_urdf():
     
-#     urdf_file_path = os.path.join(os.path.dirname(__file__), "../urdfs/base_finger.urdf")
+    urdf_file_path = os.path.join(os.path.dirname(__file__), "../urdfs/base_finger.urdf")
 
-#     print("wtf")
-#     print(urdf_file_path)
-#     # Load the Robot from the URDF file
-#     robot = Robot.load_from_urdf(urdf_file_path)
+    # Load the Robot from the URDF file
+    kinematic_tree = KinematicTree.load_from_urdf(urdf_file_path)
 
-#     # Assert that the Robot is created successfully
-#     assert robot.name == "base_finger"  # Replace with the actual robot name
+    kinematic_tree.print_tree()
   
 
 if __name__ == "__main__":

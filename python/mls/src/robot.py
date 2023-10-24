@@ -126,207 +126,84 @@ class KinematicTree:
             if edge.joint.name == joint_name:
                 return edge
         return None
-    # @classmethod
-    # def load_from_urdf(cls, urdf_file):
+    
+    def get_node_by_link_name(self, link_name):
+        """
+        Get a reference to the internal node by link name.
+
+        Args:
+            link_name (str): The name of the link.
+
+        Returns:
+            KinematicTreeNode: The internal node with the specified link name, or None if not found.
+        """
+        for node in self.nodes:
+            if node.link.name == link_name:
+                return node
+        return None
+
+    @classmethod
+    def load_from_urdf(cls, urdf_file):
         
-    #     kinematic_tree = KinematicTree()
+        tree = ET.parse(urdf_file)
+        root = tree.getroot()
 
-    #     xform = np.array([
-    #         [1, 0, 0, 0],
-    #         [0, 1, 0, 0],
-    #         [0, 0, 1, 0],
-    #         [0, 0, 0, 1]])
-    #     tree.add_node(KinematicTreeNode(Joint("origin", 
-    #                default_twist=homogenous_to_exponential_coordinates(xform))))
+        if root.tag != "robot":
+            raise ValueError("Invalid URDF file. 'robot' element is not root.")
 
-    #     tree = ET.parse(urdf_file)
-    #     root = tree.getroot()
+        robot_element = root
+        robot_name = robot_element.get("name")
 
-    #     if root.tag != "robot":
-    #         raise ValueError("Invalid URDF file. 'robot' element is not root.")
+        kinematic_tree = KinematicTree()
+        # Iterate through all link elements
+        for link_element in robot_element.findall("link"):
+            link_name = link_element.get("name")
+            link = Link(link_name)
 
-    #     robot_element = root
-    #     robot_name = robot_element.get("name")
+            treenode = KinematicTreeNode(link)
+            kinematic_tree.add_node(treenode)
 
-    #     parent_to_child = {}
-    #     child_to_parent = {}
+        # Iterate through all joint elements
+        for joint_element in robot_element.findall("joint"):
+            joint_name = joint_element.get("name")
 
-    #     # joints = []
-    #     # joints.append(Joint("origin", child_link))
-    #     links = []
+            # Extract parent and child link names from the URDF
+            child_link_name = joint_element.find("child").get("link")
+            parent_link_name = joint_element.find("parent").get("link")
 
-    #     # Iterate through all link elements
-    #     for link_element in robot_element.findall("link"):
-    #         link_name = link_element.get("name")
-    #         link = Link(link_name)
-    #         links.append(link)
-        
+            # # Find the corresponding link objects
+            parent_node = kinematic_tree.get_node_by_link_name(parent_link_name)
+            child_node = kinematic_tree.get_node_by_link_name(child_link_name)
 
-    #     # Iterate through all joint elements
-    #     for joint_element in robot_element.findall("joint"):
-    #         joint_name = joint_element.get("name")
+            if parent_node is None:
+                raise ValueError(f"link not found in urdf: {parent_link_name}")
+            if child_node is None:
+                raise ValueError(f"link not found in urdf: {child_link_name}")
 
-    #         # Extract parent and child link names from the URDF
-    #         parent_link_name = joint_element.find("parent").get("link")
-    #         child_link_name = joint_element.find("child").get("link")
+            joint_type = joint_element.get("type")
+            if joint_type == "revolute":
+                axis = [float(value) for value in joint_element.find("axis").get("xyz").split()]
+                active_twist = Twist(np.array(axis), np.array([0, 0, 0]))
+            elif joint_type == "fixed":
+                active_twist = Twist(np.array([0, 0, 0]), np.array([0, 0, 0]))
+            else:
+                raise ValueError(f"only revolute joints currently supported")
 
-    #         # # Find the corresponding link objects
-    #         parent_link = next((link for link in links if link.name == parent_link_name), None)
-    #         child_link = next((link for link in links if link.name == child_link_name), None)
+            # Extract the xyz and rpy attributes
+            xyz = joint_element.find("origin").get("xyz").split()
+            rpy = joint_element.find("origin").get("rpy").split()
 
-    #         if child_link is None:
-    #             raise ValueError(f"link not found in urdf: {child_link}")
-    #         if parent_link is None:
-    #             raise ValueError(f"link not found in urdf: {parent_link}")
+            # Convert the extracted values to float
+            x, y, z = float(xyz[0]), float(xyz[1]), float(xyz[2])
+            r, p, y = float(rpy[0]), float(rpy[1]), float(rpy[2])
+            rotation = R.from_euler("xyz", [r, p, y]).as_matrix()
+            xform = homogenous_from_rotation_translation(rotation, np.array([x, y, z]))
+            default_twist = homogenous_to_exponential_coordinates(xform)
 
+            joint = Joint(joint_name, 
+                          default_twist=default_twist,
+                          active_twist=active_twist)
 
-    #         joint_type = joint_element.get("type")
-    #         if joint_type == "revolute":
-    #             axis = float(joint_element.get("axis"))
-    #             active_twist = Twist(np.array(axis), np.array([0, 0, 0]))
-    #         else:
-    #             raise ValueError(f"only revolute joints currently supported")
+            kinematic_tree.add_edge(parent_node, child_node, joint)
 
-    #         # Extract the xyz and rpy attributes
-    #         xyz = joint_element.find("origin").get("xyz").split()
-    #         rpy = joint_element.find("origin").get("rpy").split()
-
-    #         # Convert the extracted values to float
-    #         x, y, z = float(xyz[0]), float(xyz[1]), float(xyz[2])
-    #         r, p, y = float(rpy[0]), float(rpy[1]), float(rpy[2])
-    #         rotation = R.from_euler("xyz", [r, p, y]).as_matrix()
-    #         xform = homogenous_from_rotation_translation(rotation, np.array([x, y, z]))
-    #         default_twist = homogenous_to_exponential_coordinates(xform)
-
-    #         kinematic_tree.add_node(Joint(joint_name, default_twist=default_twist, active_twist=active_twist))
-    #         kinematic_Tree.add_edge()
-
-
-
-            # joint = Joint(joint_name, twist, active_twist, parent_joint, child_joint)
-            # joints.append(joint)
-
-
-
-# class Robot:
-#     def __init__(self, name, joints=[], links=[]):
-#         """
-#         Initialize a Robot with a name and a list of Joint objects.
-
-#         Args:
-#             name (str): Name of the robot.
-#             joints (list, optional): List of Joint objects (default is an empty list).
-#         """
-#         self.name = name
-#         self.joints = joints
-#         self.links = links
-
-#     def __str__(self):
-#         return f"Robot (Name: {self.name}, Joints: {self.joints})"
-
-
-
-
-#     # @classmethod
-#     # def load_from_urdf(cls, urdf_file):
-#         tree = ET.parse(urdf_file)
-#         root = tree.getroot()
-
-#         if root.tag != "robot":
-#             raise ValueError("Invalid URDF file. 'robot' element is not root.")
-
-#         robot_element = root
-#         robot_name = robot_element.get("name")
-
-#         joints = []
-#         joints.append(Joint("origin", child_link))
-#         links = []
-
-#         # Iterate through all link elements
-#         for link_element in robot_element.findall("link"):
-#             link_name = link_element.get("name")
-#             # Extract link information from the URDF
-#             # You can customize this part based on the structure of your URDF
-#             # For example, you may need to extract link properties, visual, collision, etc.
-#             link = Link(link_name)
-#             links.append(link)
-        
-
-#         # Iterate through all joint elements
-#         for joint_element in robot_element.findall("joint"):
-#             joint_name = joint_element.get("name")
-
-#             # Extract parent and child link names from the URDF
-#             parent_link_name = joint_element.find("parent").get("link")
-#             child_link_name = joint_element.find("child").get("link")
-
-#             # # Find the corresponding link objects
-#             parent_link = next((link for link in links if link.name == parent_link_name), None)
-#             child_link = next((link for link in links if link.name == child_link_name), None)
-
-#             joints.append(Joint(joint_name, parent_link=parent_link, child_links=[child_link]))
-
-
-#             # if child_link is None:
-#             #     raise ValueError(f"link not found in urdf: {child_link}")
-#             # if parent_link is None:
-#             #     raise ValueError(f"link not found in urdf: {parent_link}")
-
-#             # # Extract the xyz and rpy attributes
-#             # xyz = joint_element.find("origin").get("xyz").split()
-#             # rpy = joint_element.find("origin").get("rpy").split()
-
-#             # # Convert the extracted values to float
-#             # x, y, z = float(xyz[0]), float(xyz[1]), float(xyz[2])
-#             # r, p, y = float(rpy[0]), float(rpy[1]), float(rpy[2])
-#             # rotation = R.from_euler("xyz", [r, p, y]).as_matrix()
-#             # xform = homogenous_from_rotation_translation(rotation, np.array([x, y, z]))
-#             # twist = homogenous_to_exponential_coordinates(xform)
-
-#             # joint_type = joint_element.get("type")
-#             # if joint_type == "revolute":
-#             #     axis = joint_element.get("axis")
-#             #     # active_twist = Twist()
-
-#             # joint = Joint(joint_name, twist, active_twist, parent_joint, child_joint)
-#             # joints.append(joint)
-
-#         # Usage example
-#         # Define your list of joints and links, then call the function
-#         root_links = find_root_links(joints, links)
-#         if len(root_links) == 0:
-#             raise ValueError("No root link found.")
-#         elif len(root_links) > 1:
-#             raise ValueError("Multiple root links found")
-#         else:
-#             print("Root link of {root_link[0]} found")
-
-#         root_link = root_links[0]
-#         joint_tree = create_tree_structure(links, joints, root_link)
-
-#         return cls(robot_name, joints, links)
-
-# def find_root_links(joints, links):
-#     # Create a set of link names that are children in joints
-#     child_links = set(joint.child_links[0] for joint in joints if joint.child_links)
-
-#     root_links = []
-
-#     # Find the links that is not a child of any other link
-#     for link in links:
-#         if link not in child_links:
-#             root_links.append(link)
-
-#     return root_links
-
-# def create_tree_structure(links, joints, root_link):
-#     def build_tree(link):
-#         child_nodes = []
-#         for joint in joints:
-#             if joint.parent_link == link:
-#                 child_link = joint.child_links[0]
-#                 child_node = build_tree(child_link)
-#                 child_nodes.append(child_node)
-#         return TreeNode(link, child_nodes)
-
-#     return build_tree(root_link)
+        return kinematic_tree
