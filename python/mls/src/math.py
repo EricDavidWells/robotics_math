@@ -1,6 +1,29 @@
 import numpy as np
 from math import cos, sin, tan, acos
 
+class Twist:
+    def __init__(self, w, v, theta=0.0):
+        """
+        Initialize a Twist object with angular velocity (w), linear velocity (v), and an optional theta.
+
+        Args:
+            w (numpy.ndarray): 1x3 angular velocity vector.
+            v (numpy.ndarray): 1x3 linear velocity vector.
+            theta (float, optional): Rotation angle (default is 0).
+
+        Raises:
+            ValueError: If w and v are not 1x3 vectors.
+        """
+        if w.shape != (3,) or v.shape != (3,):
+            raise ValueError("Both w and v must be 1x3 vectors.")
+        
+        self.w = w
+        self.v = v
+        self.theta = theta
+
+    def __str__(self):
+        return f"Twist (w: {self.w}, v: {self.v}, theta: {self.theta})"
+
 def skew_symmetric_matrix(vector):
     if vector.shape != (3,):
         raise ValueError("Input vector must be a 1x3 NumPy array.")
@@ -70,56 +93,22 @@ def homogenous_from_rotation_translation(rotation, translation):
 
     return homogeneous_matrix
 
-def create_twist(w, v):
-    """
-    Create a 6D twist vector from angular velocity (w) and linear velocity (v).
+def homogenous_from_exponential_coordinates(twist):
+    if not isinstance(twist, Twist):
+        raise ValueError("Input twist must be an instance of the Twist class.")
 
-    Args:
-        w (numpy.ndarray): 3D angular velocity vector.
-        v (numpy.ndarray): 3D linear velocity vector.
+    w = twist.w
+    v = twist.v
+    theta = twist.theta
 
-    Returns:
-        numpy.ndarray: 6D twist vector [angular_velocity, linear_velocity].
-
-    Raises:
-        ValueError: If w and v are not both 3D vectors.
-    """
-    if w.shape != (3,) or v.shape != (3,):
-        raise ValueError("Both w and v must be 3D vectors.")
-
-    return np.concatenate((w, v))
-
-def homogenous_from_exponential_coordinates(twist, theta):
-    """
-    Convert a twist to a 4x4 homogeneous transformation matrix.
-
-    Args:
-        twist (numpy.ndarray): 6D twist vector [angular_velocity, linear_velocity].
-        theta (float): Rotation angle (for the magnitude of the twist).
-
-    Returns:
-        numpy.ndarray: 4x4 homogeneous transformation matrix.
-
-    Raises:
-        ValueError: If the twist vector is not a 6D vector.
-    """
-    if twist.shape != (6,):
-        raise ValueError("Input twist vector must be a 6D vector.")
-
-    # Split the twist vector into angular velocity and linear velocity components
-    w = twist[:3]
-    v = twist[3:]
-
-    # Calculate the rotation matrix using the Rodrigues' formula
     p = np.zeros((3,))
     R = np.eye(3)
-    if np.allclose(w, 0):
+    if np.allclose(w, np.zeros(3)):
         p = v * theta
     else:
         R = rotation_from_canonical_coordinates(w, theta)
-        p = (np.eye(3) - R)@skew_symmetric_matrix(w)@v + w.reshape(3,1)@w.reshape(1,3)@v*theta
+        p = (np.eye(3) - R) @ skew_symmetric_matrix(w) @ v + np.outer(w, w) @ v * theta
 
-    # Create the 4x4 homogeneous transformation matrix
     T = np.eye(4)
     T[:3, :3] = R
     T[:3, 3] = p
@@ -127,37 +116,21 @@ def homogenous_from_exponential_coordinates(twist, theta):
     return T
 
 def homogenous_to_exponential_coordinates(T):
-    """
-    Convert a homogeneous transformation matrix to a twist.
-
-    Args:
-        T (numpy.ndarray): 4x4 homogeneous transformation matrix.
-
-    Returns:
-        numpy.ndarray: 6D twist vector [angular_velocity, linear_velocity].
-
-    Raises:
-        ValueError: If the input matrix is not a 4x4 matrix.
-    """
     if T.shape != (4, 4):
         raise ValueError("Input matrix must be a 4x4 homogeneous transformation matrix.")
 
-    # Extract the rotation matrix and translation vector
     R = T[:3, :3]
-    p = T[:3, 3]        
+    p = T[:3, 3]
 
     w = np.zeros((3,))
     v = np.zeros((3,))
     if np.allclose(R, np.eye(3)):
         theta = np.linalg.norm(p)
-        v = p/theta
+        if np.isclose(theta, 0): v = np.zeros((3,))
+        else: v = p / theta
     else:
-        
-      # Calculate the angular velocity (skew-symmetric matrix)
-      w, theta = rotation_to_canonical_coordinates(R)
-      A = (np.eye(3) - R)@skew_symmetric_matrix(w) + w.reshape(3,1)@w.reshape(1,3) * theta
+        w, theta = rotation_to_canonical_coordinates(R)
+        A = (np.eye(3) - R) @ skew_symmetric_matrix(w) + np.outer(w, w) * theta
+        v = np.linalg.inv(A) @ p
 
-      # Calculate the linear velocity
-      v = np.linalg.inv(A) @ p
-
-    return np.concatenate((w, v)), theta
+    return Twist(w, v, theta)

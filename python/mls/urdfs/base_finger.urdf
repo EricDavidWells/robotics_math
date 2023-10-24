@@ -1,0 +1,71 @@
+<robot name="base_finger">
+
+<!-- Define the base link for the right hand -->
+  <link name="wrist_link" />
+
+  <!-- MCP Abduction link -->
+  <link name="mcp_abduction_link" />
+
+  <!-- Connect MCP Abduction link to wrist_link -->
+  <joint name="mcp_abduction" type="revolute">
+    <origin xyz="0 0.05 0"
+      rpy="0 0 0" />
+    <parent link="wrist_link" />
+    <child link="mcp_abduction_link" />
+    <axis xyz="0 0 1.0" />
+    <limit effort="0" velocity="0" lower="-0.5" upper="0.5" />
+  </joint>
+
+<!-- Define the MCP Flexion Link -->
+  <link name="mcp_flexion_link" />
+
+  <!-- Connect the MCP Flexion link to the MCP abduction link -->
+  <joint name="mcp_flexion" type="revolute">
+    <origin xyz="0 0 0"
+      rpy="1.5708 0. 1.5708" />
+    <parent link="mcp_abduction_link" />
+    <child link="mcp_flexion_link" />
+    <axis xyz="0 0 1" />
+    <limit effort="0" velocity="0" lower="0" upper="1.5708" />
+  </joint>
+
+<!-- Define the PIP flexion link -->
+  <link name="pip_flexion_link" />
+
+<!-- Connect PIP flexion link to MCP flexion link -->
+  <joint name="pip_flexion" type="revolute">
+    <origin xyz="0 0.05 0"
+      rpy="0 0 0" />
+    <parent link="mcp_flexion_link" />
+    <child link="pip_flexion_link" />
+    <axis xyz="0 0 1" />
+    <limit effort="0" velocity="0" lower="0" upper="1.5708" />
+    <joint_properties friction="0.0" />
+  </joint>
+
+  <!-- Define DIP Flexion link -->
+  <link name="dip_flexion_link">    
+  </link>
+
+  <!-- Connect DIP link to PIP Link -->
+  <joint name="dip_flexion" type="revolute">
+    <origin xyz="0 0.05 0"
+      rpy="0 0 0" />
+    <parent link="pip_flexion_link" />
+    <child link="dip_flexion_link" />
+    <axis xyz="0 0 1" />
+    <limit effort="0" velocity="0" lower="0" upper="1.5708" />
+    <joint_properties friction="0.0" />
+  </joint>
+  
+  <!-- Define finger tracker link -->
+  <link name="tracker_link" />
+
+  <joint name="tip" type="fixed">
+    <origin xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent link="dip_flexion_link" />
+    <child link="tracker_link" />
+  </joint>
+
+</robot>

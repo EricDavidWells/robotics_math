@@ -1,2 +1,2 @@
 export PYTHONPATH=$PWD
-pytest
+pytest -s

@@ -4,7 +4,8 @@ import os
 import sys
 
 from mls.src.math import *
-from math import sin, cos, tan
+from mls.src.robot import *
+from math import sin, cos, tan, pi
 
 # Test cases for skew_symmetric_matrix
 def test_skew_symmetric_matrix():
@@ -72,7 +73,6 @@ def test_homogenous_from_rotation_translation_with_valid_input():
     with pytest.raises(ValueError):
         homogenous_from_rotation_translation(rotation, translation)
 
-
 def test_rotation_from_canonical_coordinates():
     # Valid input
     vector = np.array([1, 0, 0])
@@ -107,36 +107,138 @@ def test_homogenous_twist():
     theta = 1
     v = np.array([l1, 0, 0])
     w = np.array([0, 0, 1])
-    twist = create_twist(w, v)
-    expected_result = np.array([[cos(theta), -sin(theta), 0, l1*sin(theta)], 
-                                [sin(theta), cos(theta), 0, l1*(1-cos(theta))],
+    twist = Twist(w, v, theta)
+    expected_result = np.array([[cos(theta), -sin(theta), 0, l1 * sin(theta)],
+                                [sin(theta), cos(theta), 0, l1 * (1 - cos(theta))],
                                 [0, 0, 1, 0],
                                 [0, 0, 0, 1]])
-    
-    g = homogenous_from_exponential_coordinates(twist, theta)
+
+    g = homogenous_from_exponential_coordinates(twist)
     assert np.allclose(g, expected_result)
 
-
-    new_twist, new_theta = homogenous_to_exponential_coordinates(g)
-    assert np.allclose(twist, new_twist)
-    assert np.isclose(theta, new_theta)
+    new_twist = homogenous_to_exponential_coordinates(g)
+    assert np.allclose(twist.w, new_twist.w)
+    assert np.allclose(twist.v, new_twist.v)
+    assert np.isclose(twist.theta, new_twist.theta)
 
     # test pure translation
     l1 = 3
     theta = 1
     v = np.array([1, 0, 0])
     w = np.array([0, 0, 0])
-    twist = create_twist(w, v)
-    expected_result = np.array([[1, 0, 0, theta], 
+    twist = Twist(w, v, theta)
+    expected_result = np.array([[1, 0, 0, theta],
                                 [0, 1, 0, 0],
                                 [0, 0, 1, 0],
                                 [0, 0, 0, 1]])
-    g = homogenous_from_exponential_coordinates(twist, theta)
+    g = homogenous_from_exponential_coordinates(twist)
     assert np.allclose(g, expected_result)
 
-    new_twist, new_theta = homogenous_to_exponential_coordinates(g)
-    assert np.allclose(twist, new_twist)
-    assert np.isclose(theta, new_theta)
+    new_twist = homogenous_to_exponential_coordinates(g)
+    assert np.allclose(twist.w, new_twist.w)
+    assert np.allclose(twist.v, new_twist.v)
+    assert np.isclose(twist.theta, new_twist.theta)
+
+def test_kinematic_tree_creation():
+    # Create some Joint objects
+    joint0 = Joint("origin", Twist(np.array([0.1, 0.2, 0.3]), np.array([1.0, 2.0, 3.0]), theta=0.1))
+    joint1 = Joint("Joint1", Twist(np.array([0.1, 0.2, 0.3]), np.array([1.0, 2.0, 3.0]), theta=0.1))
+    joint2 = Joint("Joint2", Twist(np.array([0.2, 0.3, 0.4]), np.array([2.0, 3.0, 4.0]), theta=0.2))
+
+    link1 = Link("link1")
+    link2 = Link("link2")
+
+    kinematicTreeNode0 = KinematicTreeNode(joint0)
+    kinematicTreeNode1 = KinematicTreeNode(joint1)
+    kinematicTreeNode2 = KinematicTreeNode(joint2)
+
+    tree = KinematicTree()
+
+    tree.add_node(kinematicTreeNode0)
+    tree.add_node(kinematicTreeNode1)
+    tree.add_node(kinematicTreeNode2)
+
+    tree.add_edge(kinematicTreeNode0, kinematicTreeNode1, link1)
+    tree.add_edge(kinematicTreeNode1, kinematicTreeNode2, link2)
+
+    tree.print_tree()
+
+def test_kinematic_tree_forward_kinematics():
+    # example 4.1.2 in Modern Robotics
+
+    xform = np.array([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]])
+    origin = Joint("origin", 
+                   default_twist=homogenous_to_exponential_coordinates(xform))
+    xform = np.array([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]])
+    active_twist = Twist(np.array([0, 0, 1]), np.array([0, 0, 0]))
+    joint0 = Joint("joint_0", 
+                   default_twist=homogenous_to_exponential_coordinates(xform),
+                   active_twist=active_twist)
+    xform = np.array([
+        [1, 0, 0, 10],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]])
+    active_twist = Twist(np.array([0, 1, 0]), np.array([0, 0, 0]))
+    joint1 = Joint("joint_1", 
+                   default_twist=homogenous_to_exponential_coordinates(xform),
+                   active_twist=active_twist)
+
+    xform = np.array([
+        [1, 0, 0, 5],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]])
+    active_twist = Twist(np.array([0, 0, 1]), np.array([0, 0, 0]))
+    joint2 = Joint("joint_2", 
+                   default_twist=homogenous_to_exponential_coordinates(xform),
+                   active_twist=active_twist)
+
+    link1 = Link("link1")
+    link1 = Link("link2")
+
+    kinematicTreeNodeorigin = KinematicTreeNode(origin)
+    kinematicTreeNode0 = KinematicTreeNode(joint0)
+    kinematicTreeNode1 = KinematicTreeNode(joint1)
+    kinematicTreeNode2 = KinematicTreeNode(joint2)
+
+    tree = KinematicTree()
+    tree.add_node(kinematicTreeNodeorigin)
+    tree.add_node(kinematicTreeNode0)
+    tree.add_node(kinematicTreeNode1)
+    tree.add_node(kinematicTreeNode2)
+    tree.add_edge(kinematicTreeNode0, kinematicTreeNode1, link1)
+    tree.add_edge(kinematicTreeNode1, kinematicTreeNode2, link1)
+    tree.print_tree()
+
+    tree.update_thetas(["joint_0", "joint_1", "joint_2"], [pi, pi, pi/6])
+    final_xform = tree.forward_kinematics(tree.get_node_by_joint_name("joint_2"))
+    print(np.around(final_xform, 2))
+    tree.update_thetas(["joint_0", "joint_1", "joint_2"], [pi, pi, pi/6+0.1])
+    final_xform = tree.forward_kinematics(tree.get_node_by_joint_name("joint_2"))
+    print(np.around(final_xform, 2))
+
+    
+# def test_load_robot_from_urdf():
+    
+#     urdf_file_path = os.path.join(os.path.dirname(__file__), "../urdfs/base_finger.urdf")
+
+#     print("wtf")
+#     print(urdf_file_path)
+#     # Load the Robot from the URDF file
+#     robot = Robot.load_from_urdf(urdf_file_path)
+
+#     # Assert that the Robot is created successfully
+#     assert robot.name == "base_finger"  # Replace with the actual robot name
+  
 
 if __name__ == "__main__":
     pytest.main()
