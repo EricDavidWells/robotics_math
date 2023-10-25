@@ -225,6 +225,40 @@ def test_load_kinematic_tree_from_urdf():
 
     kinematic_tree.print_tree()
   
+def test_save_kinematic_tree_as_urdf():
+    
+    urdf_file_path = os.path.join(os.path.dirname(__file__), "../urdfs/ur5.urdf")
+    output_path = os.path.join(os.path.dirname(__file__), "../urdfs/test_output.urdf")
+
+    # Load the Robot from the URDF file
+    kinematic_tree_original = KinematicTree.load_from_urdf(urdf_file_path)
+    kinematic_tree_original.to_urdf(output_path)
+    kinematic_tree_original.update_thetas(["joint2", "joint5"], [-pi/2, pi/2])
+    final_xform_original = kinematic_tree_original.forward_kinematics(kinematic_tree_original.get_edge_by_joint_name("ee_joint"))
+    kinematic_tree_new = KinematicTree.load_from_urdf(output_path)
+    kinematic_tree_new.update_thetas(["joint2", "joint5"], [-pi/2, pi/2])
+    final_xform_new = kinematic_tree_new.forward_kinematics(kinematic_tree_new.get_edge_by_joint_name("ee_joint"))
+
+    assert np.allclose(final_xform_original, final_xform_new)
+
+
+def test_ur5_kinematics():
+    # Example 4.5 in Modern Robotics updated December 30, 2019  
+    
+    urdf_file_path = os.path.join(os.path.dirname(__file__), "../urdfs/ur5.urdf")
+    kinematic_tree = KinematicTree.load_from_urdf(urdf_file_path)
+    kinematic_tree.print_tree()
+    kinematic_tree.update_thetas(["joint2", "joint5"], [-pi/2, pi/2])
+    final_xform = kinematic_tree.forward_kinematics(kinematic_tree.get_edge_by_joint_name("ee_joint"))
+
+    expected_xform = np.array([
+        [0, -1, 0, 0.095],
+        [1, 0, 0, 0.109],
+        [0, 0, 1, 0.988],
+        [0, 0, 0, 1]
+    ])
+
+    assert np.allclose(expected_xform, final_xform, rtol=0.01)
 
 if __name__ == "__main__":
     pytest.main()

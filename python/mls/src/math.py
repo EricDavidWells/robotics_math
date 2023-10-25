@@ -1,5 +1,6 @@
 import numpy as np
 from math import cos, sin, tan, acos
+from scipy.spatial.transform import Rotation as R
 
 class Twist:
     def __init__(self, w, v, theta=0.0):
@@ -69,6 +70,18 @@ def matrix_trace(matrix):
     trace = np.trace(matrix)
     return trace
 
+def homogenous_to_rotation_translation(T):
+    if T.shape != (4, 4):
+        raise ValueError("Input matrix must be a 4x4 homogeneous transformation matrix.")
+
+    # Populate the upper-left 3x3 submatrix with the rotation matrix
+    rotation = T[:3, :3]
+
+    # Populate the first three elements of the last column with the translation vector
+    translation = T[:3, 3]
+
+    return rotation, translation
+
 def homogenous_from_rotation_translation(rotation, translation):
     # Check if the input matrices are NumPy arrays
     if not isinstance(rotation, np.ndarray) or not isinstance(translation, np.ndarray):
@@ -134,3 +147,17 @@ def homogenous_to_exponential_coordinates(T):
         v = np.linalg.inv(A) @ p
 
     return Twist(w, v, theta)
+
+def extrinsic_rpy_to_rotation(r, p, y):
+    rotation = R.from_euler("xyz", [r, p, y]).as_matrix()
+    return rotation
+
+def extrinsic_rpy_from_rotation(rotation):
+    if rotation.shape != (3, 3):
+        raise ValueError("Input matrix must be a 3x3 NumPy array.")
+
+    angles = R.from_matrix(rotation).as_euler("xyz")
+    r = angles[0]
+    p = angles[1]
+    y = angles[2]
+    return r, p, y
