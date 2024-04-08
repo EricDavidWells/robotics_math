@@ -248,7 +248,7 @@ def test_ur5_kinematics():
     urdf_file_path = os.path.join(os.path.dirname(__file__), "../urdfs/ur5.urdf")
     kinematic_tree = KinematicTree.load_from_urdf(urdf_file_path)
     kinematic_tree.print_tree()
-    kinematic_tree.update_thetas(["joint2", "joint5"], [-pi/2, pi/2])
+    kinematic_tree.update_thetas(["joint2", "joint5"], [0, 0])
     final_xform = kinematic_tree.forward_kinematics(kinematic_tree.get_edge_by_joint_name("ee_joint"))
 
     expected_xform = np.array([
@@ -257,6 +257,9 @@ def test_ur5_kinematics():
         [0, 0, 1, 0.988],
         [0, 0, 0, 1]
     ])
+    np.set_printoptions(precision=4, suppress=True)
+
+    print(final_xform)
 
     assert np.allclose(expected_xform, final_xform, rtol=0.01)
 
