@@ -40,5 +40,12 @@ def generate_launch_description():
             name='rviz2',
             output='screen',
             arguments=['-d', rviz_config_path]
+        ),
+        Node(
+            package='rr_mechanism',
+            executable='rr_mechanism',
+            name='rr_mechanism',
+            parameters=[{'urdf_path': urdf_file},
+                        {'tip_frame': 'link_tip'}]
         )
     ])

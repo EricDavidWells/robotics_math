@@ -29,7 +29,7 @@ find_package(fmt REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
-# find_package(pinocchio REQUIRED)
+find_package(pinocchio REQUIRED)
 find_package(tf2_eigen REQUIRED)
 
 ##############
@@ -42,6 +42,7 @@ add_executable(rr_mechanism
 
 target_link_libraries(rr_mechanism PUBLIC
     fmt::fmt-header-only
+    pinocchio::pinocchio
     )
 
 ament_target_dependencies(rr_mechanism PUBLIC
