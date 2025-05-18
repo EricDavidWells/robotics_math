@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<robot name="simple_rr_robot">
+
+  <!-- Base link -->
+  <link name="base_link"/>
+
+  <!-- Link 1 -->
+  <link name="link1">
+    <visual>
+      <geometry>
+        <cylinder length="1.0" radius="0.05"/>
+      </geometry>
+      <origin xyz="0 0.5 0" rpy="1.5708 0 0"/>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0.5 0" rpy="1.5708 0 0"/>
+      <inertia
+        ixx="0.01" ixy="0.0" ixz="0.0"
+        iyy="0.01" iyz="0.0"
+        izz="0.01"/>
+    </inertial>
+  </link>
+
+  <!-- Joint 1 -->
+  <joint name="joint1" type="revolute">
+    <parent link="base_link"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 -1"/>
+    <limit effort="10" velocity="2.0" lower="-3.14" upper="3.14"/>
+  </joint>
+
+  <!-- Link 2 -->
+  <link name="link2">
+    <visual>
+      <geometry>
+        <cylinder length="1.0" radius="0.05"/>
+      </geometry>
+      <origin xyz="0 0.5 0" rpy="1.5708 0 0"/>
+      <material name="green">
+        <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0.5 0" rpy="1.5708 0 0"/>
+      <inertia
+        ixx="0.01" ixy="0.0" ixz="0.0"
+        iyy="0.01" iyz="0.0"
+        izz="0.01"/>
+    </inertial>
+  </link>
+
+  <!-- Joint 2 -->
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 1.0 0" rpy="0 0 1.5708"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="2.0" lower="-3.14" upper="3.14"/>
+  </joint>
+
+  <!-- Tip Link -->
+  <link name="link_tip">
+    <inertial>
+      <mass value="0.2"/>
+      <origin xyz="0 0.15 0" rpy="1.5708 0 0"/>
+      <inertia
+        ixx="0.001" ixy="0.0" ixz="0.0"
+        iyy="0.001" iyz="0.0"
+        izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- Fixed joint for tip -->
+  <joint name="joint_tip" type="fixed">
+    <parent link="link2"/>
+    <child link="link_tip"/>
+    <origin xyz="0 1.0 0" rpy="0 0 0"/> <!-- At end of link2 along its +Y -->
+  </joint>
+
+</robot>
